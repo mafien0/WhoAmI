@@ -1,0 +1,6 @@
+name: whoAmI
+version: '1.0-SNAPSHOT'
+main: cc.mafien0.whoAmI.WhoAmI
+api-version: '1.21'
+authors: [ mafien0 ]
+depend: [ CommandAPI ]
