@@ -1,31 +1,29 @@
 package cc.mafien0.whoAmI
 
+import cc.mafien0.whoAmI.content.Commands
+import cc.mafien0.whoAmI.content.PlayerControl
 import dev.jorel.commandapi.CommandAPI
 import dev.jorel.commandapi.CommandAPIPaperConfig
-import dev.jorel.commandapi.CommandAPICommand
-import dev.jorel.commandapi.executors.CommandExecutor
 import org.bukkit.plugin.java.JavaPlugin
 import org.slf4j.LoggerFactory
 
-private val logger = LoggerFactory.getLogger("WhoAmI")
+private val log = LoggerFactory.getLogger("WhoAmI")
 class WhoAmI : JavaPlugin() {
 
     override fun onLoad() {
-        CommandAPI.onLoad(CommandAPIPaperConfig(this).verboseOutput(true)) // Load with verbose output
-
-        CommandAPICommand("ping")
-            .executes(CommandExecutor { sender, _ ->
-                sender.sendMessage("pong!")
-            })
-            .register()
+        log.info("Loading WhoAmI")
+        CommandAPI.onLoad(CommandAPIPaperConfig(this).verboseOutput(true))
+        Commands().load()
     }
 
     override fun onEnable() {
+        log.info("Enabling WhoAmI")
         CommandAPI.onEnable()
-        // Register commands, listeners etc.
+        server.pluginManager.registerEvents(PlayerControl, this)
     }
 
     override fun onDisable() {
+        log.info("Disabling WhoAmI")
         CommandAPI.onDisable()
     }
 }
