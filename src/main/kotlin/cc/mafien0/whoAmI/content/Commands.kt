@@ -2,6 +2,8 @@ package cc.mafien0.whoAmI.content
 
 import cc.mafien0.whoAmI.content.PlayerControl.requestInput
 import dev.jorel.commandapi.CommandAPICommand
+import dev.jorel.commandapi.CommandPermission
+import dev.jorel.commandapi.arguments.GreedyStringArgument
 import dev.jorel.commandapi.executors.CommandExecutor
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.NamedTextColor
@@ -24,6 +26,17 @@ class Commands {
             })
             .register()
 
+        // Config
+        CommandAPICommand("addposition")
+           .withArguments(GreedyStringArgument("index"))
+            .withPermission(CommandPermission.OP)
+            .executes(CommandExecutor { sender, args ->
+                val index = (args["index"] as String).toInt()
+                val player = sender as Player
+                Config.setPosition(index, player.location)
+            })
+            .register()
+
         // Join
         CommandAPICommand("join")
             .withAliases("j")
@@ -43,6 +56,7 @@ class Commands {
         // Start
         CommandAPICommand("start")
             .withAliases("s", "restart")
+            .withPermission(CommandPermission.OP)
             .executes(CommandExecutor { sender, _ ->
                 Game.start()
             })

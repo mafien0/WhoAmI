@@ -1,0 +1,7 @@
+config:
+  max-players: 4
+positions:
+  '0': loc
+  '1': loc
+  '2': loc
+  '3': loc

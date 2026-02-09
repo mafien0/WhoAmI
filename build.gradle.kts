@@ -9,6 +9,7 @@ version = "1.0-SNAPSHOT"
 
 repositories {
     mavenCentral()
+    maven(url = "https://jitpack.io/")
     maven("https://repo.papermc.io/repository/maven-public/") {
         name = "papermc-repo"
     }
@@ -16,6 +17,7 @@ repositories {
 
 dependencies {
     compileOnly("io.papermc.paper:paper-api:1.21.11-R0.1-SNAPSHOT")
+    compileOnly("com.github.Gecolay.GSit:core:3.1.1")
     compileOnly("dev.jorel:commandapi-paper-core:11.1.0")
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
 }
