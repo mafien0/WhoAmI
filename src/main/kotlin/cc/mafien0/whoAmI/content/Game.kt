@@ -174,17 +174,9 @@ object Game {
                     log.info("Player inputs: $playerInputs")
                     log.info("Total players: $totalPlayers")
                     log.info("Inputs received: $inputsReceived")
-                
-                    // Continue to next step on the MAIN THREAD
-                    val plugin = Bukkit.getPluginManager().getPlugin("whoAmI")
-                    Bukkit.getScheduler().runTask(plugin!!, Runnable {
-                        if(!secondStep(player)) {
-                            log.info("SecondStep failed, game not started")
-                        } else {
-                            player.sendMessage(Component.text("Game started!", NamedTextColor.GREEN))
-                            log.info("Game started successfully")
-                        }
-                    })
+
+                    log.info("Starting second step")
+                    secondStep(player)
                 }
             }
         }
@@ -194,28 +186,36 @@ object Game {
 
     /**
      * Actions:
-     * - Sit players on their places (load from config)
-     * - Spawn text displays in their positions (load from config initial place, 3 block higher)
+     * - Sit players on their places
+     * - Spawn text displays in their positions
+     * @param player The player who initiated the game
+     * @return True, if successful, false otherwise
      */
     fun secondStep(player: Player): Boolean {
-        players.forEachIndexed { index, player ->
-            // Load positions from the config
-            val coords = Config.getPosition(index)?.block?.location
-            if (coords == null) {
-                player.sendMessage(Component.text("Position $index not configured! Use /addposition $index", NamedTextColor.RED))
-                log.error("Position $index is not configured in config")
-                return false
+        // Switch to main thread for entity spawning
+        val plugin = Bukkit.getPluginManager().getPlugin("whoAmI")
+        Bukkit.getScheduler().runTask(plugin!!, Runnable {
+
+            players.forEachIndexed { index, p ->
+                // Load positions from the config
+                val coords = Config.getPosition(index)?.block?.location
+                if (coords == null) {
+                    player.sendMessage(Component.text("Position $index not configured! Use /addposition $index", NamedTextColor.RED))
+                    log.error("Position $index is not configured in config")
+                    return@Runnable
+                }
+                log.info("Got coords")
+
+                // Sit players on their places using GSit API
+                GSitAPI.createSeat(coords.block, p)
+                log.info("Sitting player $p on coords $coords")
+
+                // Spawn text display centered on a block
+                spawnTextDisplay(p, coords.clone().add(0.5, 3.0, 0.5), playerInputs[index])
+                log.info("Spawned text display")
             }
-            log.info("Got coords")
-
-            // Sit players on their places using GSit API
-            GSitAPI.createSeat(coords.block, player)
-            log.info("Sitting player $player on coords $coords")
-
-            // Spawn text display at the center of a block
-            spawnTextDisplay(player, coords.clone().add(0.5, 3.0, 0.5), playerInputs[index])
-            log.info("Spawned text display")
-        }
+        })
+        // TODO: Add checks
         return true
     }
 
@@ -236,8 +236,8 @@ object Game {
             // TODO
             return true
         } else {
-            log.info("Tried to stop game, but game is not running")
-            player.sendMessage(Component.text("Game is not running!", NamedTextColor.RED))
+            log.info("Tried to stop the game, but the game is not running")
+            player.sendMessage(Component.text("The game is not running!", NamedTextColor.RED))
             return false
         }
     }
@@ -248,17 +248,18 @@ object Game {
     fun start(player: Player): Boolean {
         log.info("Starting game")
 
-        // Run steps one-by-one
+        // Pre run settings and checks
         if(!preRun(player)) {
             log.info("PreRun failed, game not started")
             return false
         }
+        // Start steps
+        log.info("Starting first step")
         if(!firstStep(player)) {
             log.info("FirstStep failed, game not started")
             return false
         }
-        // secondStep is now called from firstStep callback when all inputs are received
-
+        // Next steps are being run in the first step because first step is async, and we need to wait for it.
         return true
     }
 
