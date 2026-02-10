@@ -4,9 +4,12 @@ import cc.mafien0.whoAmI.content.PlayerControl.requestInput
 import dev.jorel.commandapi.CommandAPICommand
 import dev.jorel.commandapi.CommandPermission
 import dev.jorel.commandapi.arguments.GreedyStringArgument
+import dev.jorel.commandapi.arguments.IntegerArgument
+import dev.jorel.commandapi.arguments.LocationArgument
 import dev.jorel.commandapi.executors.CommandExecutor
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.NamedTextColor
+import org.bukkit.Location
 import org.bukkit.entity.Player
 
 class Commands {
@@ -14,7 +17,7 @@ class Commands {
         // Debug
         CommandAPICommand("spawntextdisplay")
             .executes(CommandExecutor { sender, _ ->
-                Game.spawnTextDisplay(sender as Player)
+                Game.spawnTextDisplay(sender as Player, sender.location)
             })
             .register()
         CommandAPICommand("requestinput")
@@ -25,15 +28,25 @@ class Commands {
                 }
             })
             .register()
+        CommandAPICommand("step")
+            .withArguments(GreedyStringArgument("index"))
+            .executes(CommandExecutor { sender, args ->
+                val player = sender as Player
+                val index = (args["index"] as String).toInt()
+                if (index == 1) Game.firstStep(player)
+                if (index == 2) Game.secondStep(player)
+            })
+            .register()
 
-        // Config
+        // Add position
         CommandAPICommand("addposition")
-           .withArguments(GreedyStringArgument("index"))
+            .withArguments(IntegerArgument("index"), LocationArgument("location"))
             .withPermission(CommandPermission.OP)
             .executes(CommandExecutor { sender, args ->
-                val index = (args["index"] as String).toInt()
-                val player = sender as Player
-                Config.setPosition(index, player.location)
+                val index = args["index"] as Int
+                val location = args["location"] as Location
+                Config.setPosition(index-1, location)
+                sender.sendMessage(Component.text("Position $index set to ${location.blockX}, ${location.blockY}, ${location.blockZ}", NamedTextColor.GREEN))
             })
             .register()
 
@@ -58,7 +71,7 @@ class Commands {
             .withAliases("s", "restart")
             .withPermission(CommandPermission.OP)
             .executes(CommandExecutor { sender, _ ->
-                Game.start()
+                Game.start(sender as Player)
             })
             .register()
     }

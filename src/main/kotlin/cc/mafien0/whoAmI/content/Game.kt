@@ -1,7 +1,9 @@
 package cc.mafien0.whoAmI.content
 
+import dev.geco.gsit.api.GSitAPI
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.NamedTextColor
+import org.bukkit.Bukkit
 import org.bukkit.Color
 import org.bukkit.Location
 import org.bukkit.entity.Display
@@ -15,7 +17,8 @@ private val log = org.slf4j.LoggerFactory.getLogger("WhoAmI Game")
 object Game {
 
     // Get the max value of players from the config
-    val maxPlayers = Config.getValue("max-players").toString().toInt()
+    val maxPlayers: Int
+        get() = Config.getValue("config.max-players")?.toString()?.toIntOrNull() ?: 4
 
     // Pre-game variables
     var players: MutableList<Player> = mutableListOf()
@@ -60,7 +63,7 @@ object Game {
         log.info("Trying to join player: $player")
 
         // Checks
-        if (players.size >= 4) { // Size check
+        if (players.size >= maxPlayers) { // Size check
             player.sendMessage(Component.text("The game is full", NamedTextColor.RED))
             return false
         }
@@ -155,35 +158,37 @@ object Game {
      */
     fun firstStep(player: Player): Boolean {
         // Iterate through players and request inputs
-        players.forEach { player ->
-            PlayerControl.requestInput(player) { input ->
+        players.forEach { p ->
+            PlayerControl.requestInput(p) { input ->
                 playerInputs.add(input)
-                player.sendMessage(Component.text("Input accepted", NamedTextColor.GREEN))
-                log.info("Player ${player.name} entered: $input")
+                p.sendMessage(Component.text("Input accepted", NamedTextColor.GREEN))
+                log.info("Player ${p.name} entered: $input")
 
                 // Count the inputs and continue when all players have submitted their inputs
                 inputsReceived++
                 if (inputsReceived >= totalPlayers) {
                     // Rotate list
                     rotateList(playerInputs)
+                
+                    // Log status
+                    log.info("Player inputs: $playerInputs")
+                    log.info("Total players: $totalPlayers")
+                    log.info("Inputs received: $inputsReceived")
+                
+                    // Continue to next step on the MAIN THREAD
+                    val plugin = Bukkit.getPluginManager().getPlugin("whoAmI")
+                    Bukkit.getScheduler().runTask(plugin!!, Runnable {
+                        if(!secondStep(player)) {
+                            log.info("SecondStep failed, game not started")
+                        } else {
+                            player.sendMessage(Component.text("Game started!", NamedTextColor.GREEN))
+                            log.info("Game started successfully")
+                        }
+                    })
                 }
             }
         }
 
-        // Log status
-        log.info("Player inputs: $playerInputs")
-        log.info("Total players: $totalPlayers")
-        log.info("Inputs received: $inputsReceived")
-
-        // Checks
-        if (inputsReceived != totalPlayers) {
-            player.sendMessage(Component.text("Something went wrong", NamedTextColor.RED))
-            log.info("Player $player failed the first step, inputs are not equal to total players")
-            return false
-        }
-
-        // If everything checks out, continue
-        log.info("Player $player successfuly completed the first step")
         return true
     }
 
@@ -194,8 +199,22 @@ object Game {
      */
     fun secondStep(player: Player): Boolean {
         players.forEachIndexed { index, player ->
-            val coords = Config.getPosition(index)?.add(0.0, 3.0, 0.0)
-            spawnTextDisplay(player, coords!!, playerInputs[index])
+            // Load positions from the config
+            val coords = Config.getPosition(index)?.block?.location
+            if (coords == null) {
+                player.sendMessage(Component.text("Position $index not configured! Use /addposition $index", NamedTextColor.RED))
+                log.error("Position $index is not configured in config")
+                return false
+            }
+            log.info("Got coords")
+
+            // Sit players on their places using GSit API
+            GSitAPI.createSeat(coords.block, player)
+            log.info("Sitting player $player on coords $coords")
+
+            // Spawn text display at the center of a block
+            spawnTextDisplay(player, coords.clone().add(0.5, 3.0, 0.5), playerInputs[index])
+            log.info("Spawned text display")
         }
         return true
     }
@@ -238,16 +257,10 @@ object Game {
             log.info("FirstStep failed, game not started")
             return false
         }
-        if(!secondStep(player)) {
-            log.info("SecondStep failed, game not started")
-            return false
-        }
+        // secondStep is now called from firstStep callback when all inputs are received
 
-        player.sendMessage(Component.text("Game started!", NamedTextColor.GREEN))
-        log.info("Game started successfully")
         return true
     }
-
 
     /**
      * Restarts the game. Stops the game if it is currently running and starts it again.
@@ -260,7 +273,7 @@ object Game {
         if (isRunning()) {
             stop(player) // Player gets feedback
         }
-        start()
+        start(player)
         return true
     }
 }

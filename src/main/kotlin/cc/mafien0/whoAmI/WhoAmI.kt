@@ -19,8 +19,8 @@ class WhoAmI : JavaPlugin() {
 
     override fun onEnable() {
         log.info("Enabled WhoAmI")
-        CommandAPI.onEnable()
         Config.init(this)
+        CommandAPI.onEnable()
         server.pluginManager.registerEvents(PlayerControl, this)
     }
 
