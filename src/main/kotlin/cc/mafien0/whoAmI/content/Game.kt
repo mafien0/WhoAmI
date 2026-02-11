@@ -6,6 +6,7 @@ import net.kyori.adventure.text.format.NamedTextColor
 import org.bukkit.Bukkit
 import org.bukkit.Color
 import org.bukkit.Location
+import org.bukkit.World
 import org.bukkit.entity.Display
 import org.bukkit.entity.Player
 import org.bukkit.entity.TextDisplay
@@ -33,11 +34,11 @@ object Game {
      *
      * @param player The player above whose location the text display will spawn.
      * @param text The text to be displayed. Defaults to "Placeholder Text" if not provided.
-     * @return True if the text display was successfully spawned.
+     * @return text entity itself, for a later use
      */
-    fun spawnTextDisplay(player: Player, coords: Location, text: String = "Placeholder Text"): Boolean {
+    fun spawnTextDisplay(player: Player, coords: Location, text: String = "Placeholder Text", tag: String = "gameText"): TextDisplay {
         val world = player.world
-        world.spawn(coords, TextDisplay::class.java) { entity ->
+        val display = world.spawn(coords, TextDisplay::class.java) { entity ->
             entity.text(Component.text(text, NamedTextColor.WHITE))
             entity.billboard = Display.Billboard.CENTER
             entity.backgroundColor = Color.fromARGB(70, 0, 0, 0)
@@ -47,8 +48,21 @@ object Game {
                 Vector3f(2f, 2f, 2f),
                 AxisAngle4f()
             )
+            entity.addScoreboardTag(tag)
         }
-        return true
+        return display
+    }
+
+    /**
+     * Removes all entities in the given world that have the specified scoreboard tag.
+     *
+     * @param world The world in which the entities will be checked and removed.
+     * @param tag The scoreboard tag used to identify entities for removal. Defaults to "gameTag".
+     */
+    fun killByTag(world: World, tag: String = "gameTag") {
+        world.entities.forEach { entity ->
+            if (entity.scoreboardTags.contains(tag)) entity.remove()
+        }
     }
 
     /**
@@ -72,8 +86,8 @@ object Game {
             return false
         }
 
-        player.sendMessage(Component.text("You joined the game", NamedTextColor.GREEN))
         players.add(player)
+        Bukkit.broadcast(Component.text("${player.name} joined the game!", NamedTextColor.AQUA))
         log.info("player $player joined, players: $players")
         return true
     }
@@ -121,11 +135,14 @@ object Game {
      * @return True, if all the checks passed, false otherwise
      */
     fun preRun(player: Player): Boolean {
+        log.info("PreRun started")
 
         // Reset variables
-        playerInputs.clear()
         inputsReceived = 0
         totalPlayers = players.size
+
+        playerInputs.clear()
+        repeat(totalPlayers) { playerInputs.add("") }
 
         // Shuffle players
         players.shuffle()
@@ -158,14 +175,14 @@ object Game {
      */
     fun firstStep(player: Player): Boolean {
         // Iterate through players and request inputs
-        players.forEach { p ->
+        players.forEachIndexed { index, p ->
             PlayerControl.requestInput(p) { input ->
-                playerInputs.add(input)
-                p.sendMessage(Component.text("Input accepted", NamedTextColor.GREEN))
+                playerInputs[index] = input
+                inputsReceived++
+                Bukkit.broadcast(Component.text("${p.name} Submited their input: ${inputsReceived}/${totalPlayers}", NamedTextColor.AQUA))
                 log.info("Player ${p.name} entered: $input")
 
                 // Count the inputs and continue when all players have submitted their inputs
-                inputsReceived++
                 if (inputsReceived >= totalPlayers) {
                     // Rotate list
                     rotateList(playerInputs)
@@ -188,6 +205,7 @@ object Game {
      * Actions:
      * - Sit players on their places
      * - Spawn text displays in their positions
+     * - Hide own text displays
      * @param player The player who initiated the game
      * @return True, if successful, false otherwise
      */
@@ -211,11 +229,18 @@ object Game {
                 log.info("Sitting player $p on coords $coords")
 
                 // Spawn text display centered on a block
-                spawnTextDisplay(p, coords.clone().add(0.5, 3.0, 0.5), playerInputs[index])
+                val display = spawnTextDisplay(p, coords.clone().add(0.5, 3.0, 0.5), playerInputs[index])
                 log.info("Spawned text display")
+
+                // Hide text display from a player
+                p.hideEntity(plugin, display)
+                log.info("Hidden text display")
+
             }
         })
         // TODO: Add checks
+        Bukkit.broadcast(Component.text("Game started!", NamedTextColor.GREEN))
+        // TODO: Add sound
         return true
     }
 
@@ -232,8 +257,11 @@ object Game {
      * @return True, if the game was successfully stopped, false otherwise.
      */
     fun stop(player: Player): Boolean {
-        if (isRunning()) {
-            // TODO
+        if (isRunning() || true) { // true for debug
+            // Kill all game entities
+            killByTag(player.world, "gameText")
+
+            //TODO
             return true
         } else {
             log.info("Tried to stop the game, but the game is not running")
@@ -247,6 +275,7 @@ object Game {
      */
     fun start(player: Player): Boolean {
         log.info("Starting game")
+        Bukkit.broadcast(Component.text("Game starting!", NamedTextColor.GREEN))
 
         // Pre run settings and checks
         if(!preRun(player)) {

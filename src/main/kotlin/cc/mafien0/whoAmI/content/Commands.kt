@@ -45,6 +45,7 @@ class Commands {
             .executes(CommandExecutor { sender, args ->
                 val index = args["index"] as Int
                 val location = args["location"] as Location
+                location.add(0.0, -1.0, 0.0)
                 Config.setPosition(index-1, location)
                 sender.sendMessage(Component.text("Position $index set to ${location.blockX}, ${location.blockY}, ${location.blockZ}", NamedTextColor.GREEN))
             })
@@ -72,6 +73,15 @@ class Commands {
             .withPermission(CommandPermission.OP)
             .executes(CommandExecutor { sender, _ ->
                 Game.start(sender as Player)
+            })
+            .register()
+
+        // Start
+        CommandAPICommand("stopgame")
+            .withAliases("s", "gamestop")
+            .withPermission(CommandPermission.OP)
+            .executes(CommandExecutor { sender, _ ->
+                Game.stop(sender as Player)
             })
             .register()
     }
