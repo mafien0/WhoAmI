@@ -1,5 +1,6 @@
-config:
-  max-players: 4
+max-players: 4
+is-debug: false
+
 positions:
   '0': loc
   '1': loc

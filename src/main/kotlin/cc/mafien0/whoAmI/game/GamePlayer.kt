@@ -23,8 +23,7 @@ class GamePlayer(val player: Player) {
         private val players: MutableList<GamePlayer> = mutableListOf()
 
         // Max players allowed in the game
-        val maxPlayers: Int
-            get() = Config.getValue("config.max-players")?.toString()?.toIntOrNull() ?: 4
+        var maxPlayers: Int = Config.getMaxPlayers()
 
         /**
          * Creates a new GamePlayer instance and adds them to the game.
@@ -171,8 +170,8 @@ class GamePlayer(val player: Player) {
      *
      * @param callback Function to call when the player provides input
      */
-    fun requestInput(callback: (String) -> Unit) {
-        player.sendMessage(Component.text("Input:", NamedTextColor.BLUE))
+    fun requestInput(inputText: String = "Input:", callback: (String) -> Unit) {
+        player.sendMessage(Component.text(inputText, NamedTextColor.BLUE))
         inputCallback = callback
     }
 

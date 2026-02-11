@@ -123,7 +123,7 @@ object Game {
 
         // Request inputs from all players
         gamePlayers.forEachIndexed { index, gamePlayer ->
-            gamePlayer.requestInput { input ->
+            gamePlayer.requestInput("Name a minecraft item:") { input ->
                 // Store the input
                 playerInputs[index] = input
                 inputsReceived++
@@ -236,7 +236,6 @@ object Game {
      */
     fun start(player: Player): Boolean {
         log.info("Starting game")
-        Bukkit.broadcast(Component.text("Game starting!", NamedTextColor.GREEN))
 
         // Pre-run settings and checks
         if (!preRun(player)) {
@@ -262,7 +261,7 @@ object Game {
      * @return True, if the game was successfully stopped, false otherwise.
      */
     fun stop(player: Player): Boolean {
-        if (isRunning() || true) { // true for debug
+        if (isRunning() || Config.isDebug()) {
             // Kill all game entities
             killByTag(player.world, "gameText")
 

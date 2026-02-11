@@ -23,6 +23,7 @@ class Commands {
                 Game.spawnTextDisplay(sender as Player, sender.location)
             })
             .register()
+
         CommandAPICommand("requestinput")
             .executes(CommandExecutor { sender, _ ->
                 val player = sender as Player
@@ -37,11 +38,8 @@ class Commands {
             })
             .register()
 
-        // ... rest of commands ...
-
-        // Join
-        CommandAPICommand("join")
-            .withAliases("j")
+        CommandAPICommand("step")
+            .withAliases("s")
             .executes(CommandExecutor { sender, args ->
                 val player = sender as Player
                 val index = (args["index"] as String).toInt()
@@ -50,8 +48,11 @@ class Commands {
             })
             .register()
 
+        // ... rest of commands ...
+
         // Add position
         CommandAPICommand("addposition")
+            .withAliases("ap")
             .withArguments(IntegerArgument("index"), LocationArgument("location"))
             .withPermission(CommandPermission.OP)
             .executes(CommandExecutor { sender, args ->
@@ -59,7 +60,13 @@ class Commands {
                 val location = args["location"] as Location
                 location.add(0.0, -1.0, 0.0)
                 Config.setPosition(index-1, location)
-                sender.sendMessage(Component.text("Position $index set to ${location.blockX}, ${location.blockY}, ${location.blockZ}", NamedTextColor.GREEN))
+                sender.sendMessage(
+                    Component.text(
+                        "Position $index set to " +
+                        "${location.blockX}, ${location.blockY}, ${location.blockZ}",
+                        NamedTextColor.GREEN
+                    )
+                )
             })
             .register()
 
@@ -71,7 +78,7 @@ class Commands {
             })
             .register()
 
-        // leave
+        // Leave
         CommandAPICommand("leave")
             .withAliases("l")
             .executes(CommandExecutor { sender, _ ->
@@ -81,19 +88,36 @@ class Commands {
 
         // Start
         CommandAPICommand("start")
-            .withAliases("s", "restart")
+            .withAliases("s")
             .withPermission(CommandPermission.OP)
             .executes(CommandExecutor { sender, _ ->
                 Game.start(sender as Player)
             })
             .register()
 
-        // Start
-        CommandAPICommand("stopgame")
-            .withAliases("s", "gamestop")
+        // End
+        CommandAPICommand("end")
+            .withAliases("s", "gamestop", "stopgame")
             .withPermission(CommandPermission.OP)
             .executes(CommandExecutor { sender, _ ->
                 Game.stop(sender as Player)
+            })
+            .register()
+
+        // Max players
+        CommandAPICommand("maxplayers")
+            .withAliases("mp", "playerlimit")
+            .withArguments(IntegerArgument("amount"))
+            .withPermission(CommandPermission.OP)
+            .executes(CommandExecutor { sender, args ->
+                val amount = args["amount"] as Int
+                if (amount >= 2) Config.setMaxPlayers(amount)
+                else sender.sendMessage(
+                    Component.text(
+                        "Player limit must be at least 2!",
+                        NamedTextColor.RED
+                    )
+                )
             })
             .register()
     }

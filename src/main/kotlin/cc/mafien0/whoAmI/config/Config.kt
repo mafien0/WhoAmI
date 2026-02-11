@@ -1,5 +1,6 @@
 package cc.mafien0.whoAmI.config
 
+import cc.mafien0.whoAmI.game.GamePlayer
 import org.bukkit.Location
 import org.bukkit.configuration.file.FileConfiguration
 import org.bukkit.configuration.file.YamlConfiguration
@@ -24,6 +25,9 @@ object Config {
         config = YamlConfiguration.loadConfiguration(configFile)
     }
 
+    fun getValue(location: String): Any? = config.get(location)
+    fun isDebug(): Boolean = getValue("debug") as Boolean // No setters, set manually in the config
+
     // Save a position to config
     fun setPosition(index: Int, location: Location) {
         config.set("positions.$index", location)
@@ -35,10 +39,15 @@ object Config {
         config.save(configFile)
     }
 
-    fun getValue(location: String): Any? = config.get(location)
-
     // Get a position from config
     fun getPosition(index: Int): Location? {
         return config.getLocation("positions.$index")
+    }
+
+    fun getMaxPlayers(): Int = getValue("max-players") as Int
+    fun setMaxPlayers(maxPlayers: Int) {
+        config.set("max-players", maxPlayers)
+        GamePlayer.maxPlayers = maxPlayers
+        saveConfig()
     }
 }
