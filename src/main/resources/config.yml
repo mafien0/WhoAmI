@@ -1,5 +1,5 @@
 max-players: 4
-is-debug: false
+debug: false
 
 positions:
   '0': loc

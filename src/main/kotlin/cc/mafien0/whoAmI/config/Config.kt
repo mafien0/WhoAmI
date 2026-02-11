@@ -26,7 +26,7 @@ object Config {
     }
 
     fun getValue(location: String): Any? = config.get(location)
-    fun isDebug(): Boolean = getValue("debug") as Boolean // No setters, set manually in the config
+    fun isDebug(): Boolean = getValue("debug") as? Boolean ?: false // No setters, set manually in the config
 
     // Save a position to config
     fun setPosition(index: Int, location: Location) {

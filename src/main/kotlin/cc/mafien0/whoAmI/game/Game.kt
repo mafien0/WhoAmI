@@ -7,10 +7,15 @@ import net.kyori.adventure.text.format.NamedTextColor
 import org.bukkit.Bukkit
 import org.bukkit.Color
 import org.bukkit.Location
+import org.bukkit.Material
+import org.bukkit.Sound
 import org.bukkit.World
 import org.bukkit.entity.Display
 import org.bukkit.entity.Player
 import org.bukkit.entity.TextDisplay
+import org.bukkit.inventory.ItemStack
+import org.bukkit.potion.PotionEffect
+import org.bukkit.potion.PotionEffectType
 import org.bukkit.util.Transformation
 import org.joml.AxisAngle4f
 import org.joml.Vector3f
@@ -23,6 +28,7 @@ object Game {
     // In-game variables
     private val playerInputs: MutableList<String> = mutableListOf()
     private var inputsReceived = 0
+    private var isRunning = false
 
     /**
      * Spawns a floating text display above the player's current location.
@@ -123,7 +129,14 @@ object Game {
 
         // Request inputs from all players
         gamePlayers.forEachIndexed { index, gamePlayer ->
+
+            // Extract player
+            val plr = gamePlayer.player
+            // Play sound
+            plr.playSound(plr.location, Sound.BLOCK_NOTE_BLOCK_DIDGERIDOO, 1f, 1f)
+
             gamePlayer.requestInput("Name a minecraft item:") { input ->
+
                 // Store the input
                 playerInputs[index] = input
                 inputsReceived++
@@ -135,6 +148,7 @@ object Game {
                     )
                 )
                 log.info("Player ${gamePlayer.playerName} entered: $input")
+
 
                 // When all inputs are received, proceed to next step
                 if (inputsReceived >= totalPlayers) {
@@ -151,6 +165,7 @@ object Game {
                     log.info("Total players: $totalPlayers")
                     log.info("Inputs received: $inputsReceived")
 
+                    // Next step
                     log.info("Starting second step")
                     secondStep(player)
                 }
@@ -169,6 +184,7 @@ object Game {
     fun secondStep(player: Player): Boolean {
         // Get plugin instance
         val plugin = Bukkit.getPluginManager().getPlugin("whoAmI")
+
         if (plugin == null) {
             log.error("Plugin instance is null!")
             return false
@@ -211,20 +227,53 @@ object Game {
                 log.info("Hidden text display from ${gamePlayer.playerName}")
             }
 
-            Bukkit.broadcast(Component.text("Game started!", NamedTextColor.GREEN))
-            // TODO: Add sound
+            // Next step
+            log.info("Starting third step")
+            thirdStep(player)
         })
 
         return true
     }
+    fun thirdStep(player: Player): Boolean {
+        val gamePlayers = GamePlayer.getAll()
 
-    /**
-     * Checks if the game is currently running.
-     *
-     * @return True if the game is running, false otherwise.
-     */
-    fun isRunning(): Boolean {
-        // TODO
+        // Generate potion effects
+        val potionSaturation = PotionEffect(
+            PotionEffectType.SATURATION,
+            PotionEffect.INFINITE_DURATION,
+            0,
+            false,
+            false,
+            false
+        )
+        val potionResistance = PotionEffect(
+            PotionEffectType.RESISTANCE,
+            PotionEffect.INFINITE_DURATION,
+            4,
+            false,
+            false,
+            false
+        )
+
+        gamePlayers.forEachIndexed { index, gamePlayer ->
+            val gp = gamePlayer.player
+
+            // Apply potion effects
+            gp.addPotionEffect(potionSaturation)
+            gp.addPotionEffect(potionResistance)
+
+            // Clear inventory
+            gp.inventory.clear()
+
+            // Give items
+            gp.inventory.setItem(4, ItemStack.of(Material.WRITABLE_BOOK))
+            gp.inventory.setItem(0, ItemStack.of(Material.SPYGLASS))
+
+            // Play sound
+            gp.playSound(gp.location, Sound.BLOCK_NOTE_BLOCK_BELL, 1f, 1f)
+        }
+
+        Bukkit.broadcast(Component.text("Game started!", NamedTextColor.GREEN))
         return true
     }
 
@@ -236,6 +285,7 @@ object Game {
      */
     fun start(player: Player): Boolean {
         log.info("Starting game")
+        isRunning = true
 
         // Pre-run settings and checks
         if (!preRun(player)) {
@@ -261,9 +311,22 @@ object Game {
      * @return True, if the game was successfully stopped, false otherwise.
      */
     fun stop(player: Player): Boolean {
-        if (isRunning() || Config.isDebug()) {
-            // Kill all game entities
+        if (isRunning || Config.isDebug()) {
+
+            // Kill all text displays
             killByTag(player.world, "gameText")
+
+            GamePlayer.getAll().forEach { gamePlayer ->
+                // Extract player
+                val plr = gamePlayer.player
+
+                // Clear player
+                plr.inventory.clear()
+                plr.clearActivePotionEffects()
+
+                // Play sound
+                plr.playSound(plr.location, Sound.BLOCK_NOTE_BLOCK_BASS, 1f, 1f)
+            }
 
             // Clean up all game players
             GamePlayer.clearAll()
@@ -290,7 +353,7 @@ object Game {
      */
     fun restart(player: Player): Boolean {
         // If the game is running, stop it
-        if (isRunning()) {
+        if (isRunning) {
             stop(player)
         }
         start(player)
