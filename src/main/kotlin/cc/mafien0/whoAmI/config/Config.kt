@@ -1,4 +1,4 @@
-package cc.mafien0.whoAmI.content
+package cc.mafien0.whoAmI.config
 
 import org.bukkit.Location
 import org.bukkit.configuration.file.FileConfiguration

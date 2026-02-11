@@ -1,9 +1,12 @@
-package cc.mafien0.whoAmI.content
+@file:Suppress("SpellCheckingInspection")
 
-import cc.mafien0.whoAmI.content.PlayerControl.requestInput
+package cc.mafien0.whoAmI.commands
+
+import cc.mafien0.whoAmI.game.Game
+import cc.mafien0.whoAmI.game.GamePlayer
+import cc.mafien0.whoAmI.config.Config
 import dev.jorel.commandapi.CommandAPICommand
 import dev.jorel.commandapi.CommandPermission
-import dev.jorel.commandapi.arguments.GreedyStringArgument
 import dev.jorel.commandapi.arguments.IntegerArgument
 import dev.jorel.commandapi.arguments.LocationArgument
 import dev.jorel.commandapi.executors.CommandExecutor
@@ -23,13 +26,22 @@ class Commands {
         CommandAPICommand("requestinput")
             .executes(CommandExecutor { sender, _ ->
                 val player = sender as Player
-                requestInput(player) { input ->
-                    player.sendMessage(Component.text("You entered: $input", NamedTextColor.GREEN))
+                val gamePlayer = GamePlayer.findByPlayer(player)
+                if (gamePlayer != null) {
+                    gamePlayer.requestInput { input ->
+                        player.sendMessage(Component.text("You entered: $input", NamedTextColor.GREEN))
+                    }
+                } else {
+                    player.sendMessage(Component.text("You must be in the game!", NamedTextColor.RED))
                 }
             })
             .register()
-        CommandAPICommand("step")
-            .withArguments(GreedyStringArgument("index"))
+
+        // ... rest of commands ...
+
+        // Join
+        CommandAPICommand("join")
+            .withAliases("j")
             .executes(CommandExecutor { sender, args ->
                 val player = sender as Player
                 val index = (args["index"] as String).toInt()
@@ -55,7 +67,7 @@ class Commands {
         CommandAPICommand("join")
             .withAliases("j")
             .executes(CommandExecutor { sender, _ ->
-                Game.joinPlayer(sender as Player)
+                GamePlayer.join(sender as Player)
             })
             .register()
 
@@ -63,7 +75,7 @@ class Commands {
         CommandAPICommand("leave")
             .withAliases("l")
             .executes(CommandExecutor { sender, _ ->
-                Game.leavePlayer(sender as Player)
+                GamePlayer.leave(sender as Player)
             })
             .register()
 

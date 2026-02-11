@@ -1,8 +1,8 @@
 package cc.mafien0.whoAmI
 
-import cc.mafien0.whoAmI.content.Commands
-import cc.mafien0.whoAmI.content.Config
-import cc.mafien0.whoAmI.content.PlayerControl
+import cc.mafien0.whoAmI.commands.Commands
+import cc.mafien0.whoAmI.config.Config
+import cc.mafien0.whoAmI.listeners.ChatListener
 import dev.jorel.commandapi.CommandAPI
 import dev.jorel.commandapi.CommandAPIPaperConfig
 import org.bukkit.plugin.java.JavaPlugin
@@ -21,7 +21,7 @@ class WhoAmI : JavaPlugin() {
         log.info("Enabled WhoAmI")
         Config.init(this)
         CommandAPI.onEnable()
-        server.pluginManager.registerEvents(PlayerControl, this)
+        server.pluginManager.registerEvents(ChatListener, this)
     }
 
     override fun onDisable() {
