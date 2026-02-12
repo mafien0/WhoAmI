@@ -226,7 +226,7 @@ object Game {
                 log.info("Spawned text display for ${gamePlayer.playerName}")
 
                 // Hide text display from the player
-                gamePlayer.player.hideEntity(plugin, gamePlayer.textDisplay!!)
+                gamePlayer.hideDisplay(plugin)
                 log.info("Hidden text display from ${gamePlayer.playerName}")
             }
 

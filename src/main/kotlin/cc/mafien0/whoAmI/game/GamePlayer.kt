@@ -106,6 +106,7 @@ class GamePlayer(var player: Player) {
          * Gets the count of players currently in the game.
          */
         fun count(): Int = players.size
+
         /**
          * Clears all players from the game.
          */
@@ -146,6 +147,10 @@ class GamePlayer(var player: Player) {
         inputCallback = callback
     }
 
+    /**
+     * Hide player's personal text display from himself
+     * @param plugin server plugin
+     */
     fun hideDisplay(plugin: Plugin) {
         if (textDisplay == null) return
         player.hideEntity(plugin, textDisplay!!)
