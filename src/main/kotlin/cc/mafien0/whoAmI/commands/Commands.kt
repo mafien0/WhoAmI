@@ -96,28 +96,19 @@ class Commands {
             .register()
 
         // End
+        CommandAPICommand("gamerestart")
+            .withAliases("r", "restartgame")
+            .withPermission(CommandPermission.OP)
+            .executes(CommandExecutor { sender, _ ->
+                Game.restart(sender as Player)
+            })
+            .register()
+
         CommandAPICommand("end")
             .withAliases("s", "gamestop", "stopgame")
             .withPermission(CommandPermission.OP)
             .executes(CommandExecutor { sender, _ ->
                 Game.stop(sender as Player)
-            })
-            .register()
-
-        // Max players
-        CommandAPICommand("maxplayers")
-            .withAliases("mp", "playerlimit")
-            .withArguments(IntegerArgument("amount"))
-            .withPermission(CommandPermission.OP)
-            .executes(CommandExecutor { sender, args ->
-                val amount = args["amount"] as Int
-                if (amount >= 2) Config.setMaxPlayers(amount)
-                else sender.sendMessage(
-                    Component.text(
-                        "Player limit must be at least 2!",
-                        NamedTextColor.RED
-                    )
-                )
             })
             .register()
     }

@@ -28,7 +28,7 @@ object Game {
     // In-game variables
     private val playerInputs: MutableList<String> = mutableListOf()
     private var inputsReceived = 0
-    private var isRunning = false
+    var isRunning = false
 
     /**
      * Spawns a floating text display above the player's current location.
@@ -102,12 +102,11 @@ object Game {
         repeat(totalPlayers) { playerInputs.add("") }
 
         // Get all players as a mutable list and shuffle
-        val gamePlayers = GamePlayer.getAll().toMutableList()
+        val gamePlayers = GamePlayer.players
         gamePlayers.shuffle()
 
-        // Checks
-        if (!GamePlayer.hasEnoughPlayers()) {
-            player.sendMessage(Component.text("Not enough players (${totalPlayers}/${GamePlayer.maxPlayers})", NamedTextColor.RED))
+        if (GamePlayer.players.size < 2 || !Config.isDebug()) {
+            player.sendMessage(Component.text("Not enough players, needs to be at least 2", NamedTextColor.RED))
             log.info("Player ${player.name} tried to run the game, but not enough players")
             return false
         }
@@ -124,7 +123,7 @@ object Game {
      * @return True if successful, false otherwise.
      */
     fun firstStep(player: Player): Boolean {
-        val gamePlayers = GamePlayer.getAll()
+        val gamePlayers = GamePlayer.players
         val totalPlayers = gamePlayers.size
 
         // Request inputs from all players
@@ -136,38 +135,42 @@ object Game {
             plr.playSound(plr.location, Sound.BLOCK_NOTE_BLOCK_DIDGERIDOO, 1f, 1f)
 
             gamePlayer.requestInput("Name a minecraft item:") { input ->
+                // Synchronize to prevent race conditions
+                synchronized(playerInputs) {
+                    // Check if already processed (prevent double processing)
+                    if (inputsReceived >= totalPlayers) return@requestInput
 
-                // Store the input
-                playerInputs[index] = input
-                inputsReceived++
+                    // Store the input
+                    playerInputs[index] = input
+                    inputsReceived++
 
-                Bukkit.broadcast(
-                    Component.text(
-                        "${gamePlayer.playerName} submitted their input: $inputsReceived/$totalPlayers",
-                        NamedTextColor.AQUA
+                    Bukkit.broadcast(
+                        Component.text(
+                            "${gamePlayer.playerName} submitted their input: $inputsReceived/$totalPlayers",
+                            NamedTextColor.AQUA
+                        )
                     )
-                )
-                log.info("Player ${gamePlayer.playerName} entered: $input")
+                    log.info("Player ${gamePlayer.playerName} entered: $input")
 
+                    // When all inputs are received, proceed to next step
+                    if (inputsReceived >= totalPlayers) {
+                        // Rotate list so each player gets someone else's text
+                        rotateList(playerInputs)
 
-                // When all inputs are received, proceed to next step
-                if (inputsReceived >= totalPlayers) {
-                    // Rotate list so each player gets someone else's text
-                    rotateList(playerInputs)
+                        // Update assigned texts after rotation
+                        gamePlayers.forEachIndexed { idx, gp ->
+                            gp.assignedText = playerInputs[idx]
+                        }
 
-                    // Update assigned texts after rotation
-                    gamePlayers.forEachIndexed { idx, gp ->
-                        gp.assignedText = playerInputs[idx]
+                        // Log status
+                        log.info("Player inputs: $playerInputs")
+                        log.info("Total players: $totalPlayers")
+                        log.info("Inputs received: $inputsReceived")
+
+                        // Next step
+                        log.info("Starting second step")
+                        secondStep(player)
                     }
-
-                    // Log status
-                    log.info("Player inputs: $playerInputs")
-                    log.info("Total players: $totalPlayers")
-                    log.info("Inputs received: $inputsReceived")
-
-                    // Next step
-                    log.info("Starting second step")
-                    secondStep(player)
                 }
             }
         }
@@ -192,7 +195,7 @@ object Game {
 
         // Switch to main thread for entity spawning
         Bukkit.getScheduler().runTask(plugin, Runnable {
-            val gamePlayers = GamePlayer.getAll()
+            val gamePlayers = GamePlayer.players
 
             gamePlayers.forEachIndexed { index, gamePlayer ->
                 // Load positions from the config
@@ -234,8 +237,15 @@ object Game {
 
         return true
     }
+
+    /**
+     * Third step: Give potion effects, clear inventory, give game items, send a message about game start, play sound.
+     *
+     * @param player The player who initiated the game.
+     * @return True if successful, false otherwise.
+     */
     fun thirdStep(player: Player): Boolean {
-        val gamePlayers = GamePlayer.getAll()
+        val gamePlayers = GamePlayer.players
 
         // Generate potion effects
         val potionSaturation = PotionEffect(
@@ -310,13 +320,13 @@ object Game {
      * @param player The player who initiated the stop command.
      * @return True, if the game was successfully stopped, false otherwise.
      */
-    fun stop(player: Player): Boolean {
+    fun stop(player: Player, doCleanup: Boolean = true): Boolean {
         if (isRunning || Config.isDebug()) {
 
             // Kill all text displays
             killByTag(player.world, "gameText")
 
-            GamePlayer.getAll().forEach { gamePlayer ->
+            GamePlayer.players.forEach { gamePlayer ->
                 // Extract player
                 val plr = gamePlayer.player
 
@@ -329,11 +339,14 @@ object Game {
             }
 
             // Clean up all game players
-            GamePlayer.clearAll()
+            if (doCleanup) {
+                GamePlayer.clearAll()
+            }
 
             // Reset game state
             playerInputs.clear()
             inputsReceived = 0
+            isRunning = false
 
             Bukkit.broadcast(Component.text("Game stopped!", NamedTextColor.YELLOW))
             log.info("Game stopped by ${player.name}")
@@ -352,9 +365,10 @@ object Game {
      * @return True, if the game successfully restarted, false otherwise.
      */
     fun restart(player: Player): Boolean {
+        player.sendMessage(Component.text("Restarting game...", NamedTextColor.YELLOW))
         // If the game is running, stop it
         if (isRunning) {
-            stop(player)
+            stop(player, doCleanup = false)
         }
         start(player)
         return true

@@ -1,16 +1,16 @@
 package cc.mafien0.whoAmI.game
 
-import cc.mafien0.whoAmI.config.Config
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.NamedTextColor
 import org.bukkit.Bukkit
 import org.bukkit.entity.Player
 import org.bukkit.entity.TextDisplay
+import org.bukkit.plugin.Plugin
 import org.slf4j.LoggerFactory
 
 private val log = LoggerFactory.getLogger("WhoAmI GamePlayer")
 
-class GamePlayer(val player: Player) {
+class GamePlayer(var player: Player) {
     val playerName: String = player.name
     var assignedText: String? = null
     var textDisplay: TextDisplay? = null
@@ -20,10 +20,7 @@ class GamePlayer(val player: Player) {
 
     companion object {
         // Private list of GamePlayers in the game
-        private val players: MutableList<GamePlayer> = mutableListOf()
-
-        // Max players allowed in the game
-        var maxPlayers: Int = Config.getMaxPlayers()
+        var players: MutableList<GamePlayer> = mutableListOf()
 
         /**
          * Creates a new GamePlayer instance and adds them to the game.
@@ -33,13 +30,6 @@ class GamePlayer(val player: Player) {
          */
         fun join(player: Player): GamePlayer? {
             log.info("Trying to join player: ${player.name}")
-
-            // Check if game is full
-            if (players.size >= maxPlayers) {
-                player.sendMessage(Component.text("The game is full", NamedTextColor.RED))
-                log.info("Player ${player.name} tried to join, but the game is full")
-                return null
-            }
 
             // Check if player is already in the game
             if (findByPlayer(player) != null) {
@@ -54,7 +44,7 @@ class GamePlayer(val player: Player) {
 
             Bukkit.broadcast(
                 Component.text(
-                    "${player.name} joined the game, players: ${players.size}/$maxPlayers",
+                    "${player.name} joined the game, players: ${players.size}",
                     NamedTextColor.AQUA
                 )
             )
@@ -80,7 +70,7 @@ class GamePlayer(val player: Player) {
 
                 Bukkit.broadcast(
                     Component.text(
-                        "${player.name} left the game, players: ${players.size}/$maxPlayers",
+                        "${player.name} left the game, players: ${players.size}",
                         NamedTextColor.AQUA
                     )
                 )
@@ -113,28 +103,9 @@ class GamePlayer(val player: Player) {
         }
 
         /**
-         * Gets all GamePlayers currently in the game.
-         *
-         * @return A read-only list of GamePlayers.
-         */
-        fun getAll(): List<GamePlayer> {
-            return players.toList()
-        }
-
-        /**
          * Gets the count of players currently in the game.
          */
-        fun count(): Int {
-            return players.size
-        }
-
-        /**
-         * Checks if the game has enough players to start.
-         */
-        fun hasEnoughPlayers(): Boolean {
-            return players.size == maxPlayers
-        }
-
+        fun count(): Int = players.size
         /**
          * Clears all players from the game.
          */
@@ -173,6 +144,11 @@ class GamePlayer(val player: Player) {
     fun requestInput(inputText: String = "Input:", callback: (String) -> Unit) {
         player.sendMessage(Component.text(inputText, NamedTextColor.BLUE))
         inputCallback = callback
+    }
+
+    fun hideDisplay(plugin: Plugin) {
+        if (textDisplay == null) return
+        player.hideEntity(plugin, textDisplay!!)
     }
 
     /**
