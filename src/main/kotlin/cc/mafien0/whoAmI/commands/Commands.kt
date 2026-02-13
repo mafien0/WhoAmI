@@ -105,7 +105,7 @@ class Commands {
             .register()
 
         CommandAPICommand("end")
-            .withAliases("s", "gamestop", "stopgame")
+            .withAliases("e", "s", "gamestop", "stopgame")
             .withPermission(CommandPermission.OP)
             .executes(CommandExecutor { sender, _ ->
                 Game.stop(sender as Player)
