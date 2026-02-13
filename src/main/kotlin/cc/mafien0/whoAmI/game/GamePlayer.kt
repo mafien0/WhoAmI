@@ -2,11 +2,13 @@ package cc.mafien0.whoAmI.game
 
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.NamedTextColor
+import net.kyori.adventure.title.Title
 import org.bukkit.Bukkit
 import org.bukkit.entity.Player
 import org.bukkit.entity.TextDisplay
 import org.bukkit.plugin.Plugin
 import org.slf4j.LoggerFactory
+import java.time.Duration
 
 private val log = LoggerFactory.getLogger("WhoAmI GamePlayer")
 
@@ -154,6 +156,26 @@ class GamePlayer(var player: Player) {
     fun hideDisplay(plugin: Plugin) {
         if (textDisplay == null) return
         player.hideEntity(plugin, textDisplay!!)
+    }
+
+    /**
+     * Shows a title to the player.
+     * @param text Text component to display in the title
+     */
+    fun showTitle(text: Component) {
+        // Generate title object
+        val title = Title.title(
+            text,
+            Component.empty(),
+            Title.Times.times(
+                Duration.ofMillis(500),
+                Duration.ofSeconds(2),
+                Duration.ofMillis(500)
+            )
+        )
+
+        // Show title to a player
+        player.showTitle(title)
     }
 
     /**

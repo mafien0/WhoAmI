@@ -105,7 +105,7 @@ object Game {
         val gamePlayers = GamePlayer.players
         gamePlayers.shuffle()
 
-        if (GamePlayer.players.size < 2 || !Config.isDebug()) {
+        if (GamePlayer.players.size < 2 && !Config.isDebug()) {
             player.sendMessage(Component.text("Not enough players, needs to be at least 2", NamedTextColor.RED))
             log.info("Player ${player.name} tried to run the game, but not enough players")
             return false
@@ -281,9 +281,15 @@ object Game {
 
             // Play sound
             gp.playSound(gp.location, Sound.BLOCK_NOTE_BLOCK_BELL, 1f, 1f)
-        }
 
-        Bukkit.broadcast(Component.text("Game started!", NamedTextColor.GREEN))
+            // Show title
+            gamePlayer.showTitle(
+                Component.text(
+                    "Game started!",
+                    NamedTextColor.GREEN
+                )
+            )
+        }
         return true
     }
 
